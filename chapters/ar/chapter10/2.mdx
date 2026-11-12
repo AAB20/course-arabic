@@ -1,0 +1,67 @@
+<div dir="rtl" style="direction:rtl;text-align:right;">
+
+# إعداد نسخة Argilla الخاصة بك[[set-up-your-argilla-instance]]
+
+<CourseFloatingBanner chapter={10}
+  classNames="absolute z-10 right-0 top-0"
+  notebooks={[
+    {label: "Google Colab", value: "https://colab.research.google.com/github/huggingface/notebooks/blob/master/course/en/chapter10/section2.ipynb"},
+    {label: "Aws Studio", value: "https://studiolab.sagemaker.aws/import/github/huggingface/notebooks/blob/master/course/en/chapter10/section2.ipynb"},
+]} />
+
+لبدء استخدام Argilla، ستحتاج أولًا إلى إعداد نسخة (instance) Argilla خاصة بك. ثم ستحتاج إلى تثبيت حزمة تطوير البرمجيات (SDK) الخاصة بـ Python لتتمكن من إدارة Argilla باستخدام كود Python.
+
+## نشر واجهة مستخدم Argilla
+
+أسهل طريقة لإعداد نسخة Argilla الخاصة بك هي عبر Hugging Face Spaces. لإنشاء مساحة (Space) Argilla خاصة بك، ما عليك سوى اتباع [هذا النموذج](https://huggingface.co/new-space?template=argilla%2Fargilla-template-space). وإذا احتجت إلى مزيد من الإرشادات، فراجع [دليل البدء السريع في Argilla](https://docs.argilla.io/latest/getting_started/quickstart/).
+<img src="https://huggingface.co/datasets/huggingface-course/documentation-images/resolve/main/en/chapter10/space_config.png" alt="نموذج إعداد المساحة."/>
+
+>[!WARNING]
+> ⚠️ قد ترغب في تفعيل **التخزين الدائم** (Persistent storage) حتى لا تضيع البيانات إذا أُوقفت المساحة مؤقتًا أو أُعيد تشغيلها.
+> يمكنك فعل ذلك من إعدادات (Settings) مساحتك.
+
+بمجرد أن يعمل Argilla، يمكنك تسجيل الدخول باستخدام بيانات اعتمادك.
+
+## تثبيت حزمة Python SDK والاتصال بها
+
+يمكنك الآن الانتقال إلى بيئة Python أو الدفتر (notebook) الخاص بك وتثبيت مكتبة argilla:
+
+`!pip install argilla`
+
+لنتصل بنسخة Argilla الخاصة بنا. لفعل ذلك ستحتاج إلى المعلومات التالية:
+
+- **عنوان URL لواجهة API**: هو عنوان URL الذي يعمل عليه Argilla. إذا كنت تستخدم مساحة، فيمكنك فتح المساحة، والنقر على النقاط الثلاث في الزاوية العلوية اليمنى، ثم اختيار "Embed this Space" ونسخ **Direct URL**. ينبغي أن يبدو شبيهًا بـ `https://<your-username>.<space-name>.hf.space`.
+- **مفتاح API الخاص بك**: للحصول على مفتاحك، سجّل الدخول إلى نسخة Argilla الخاصة بك وانتقل إلى "My Settings"، ثم انسخ مفتاح API.
+- **رمز HF المميز (HF token) الخاص بك**: إذا كانت مساحتك خاصة، فستحتاج إلى رمز وصول (Access Token) في حسابك على Hugging Face Hub بصلاحيات الكتابة.
+
+<div dir="ltr">
+
+```python
+import argilla as rg
+
+HF_TOKEN = "..."  # only for private spaces
+
+client = rg.Argilla(
+    api_url="...",
+    api_key="...",
+    headers={"Authorization": f"Bearer {HF_TOKEN}"},  # only for private spaces
+)
+```
+
+</div>
+
+للتحقق من أن كل شيء يعمل بشكل سليم، سنستدعي `me`. ينبغي أن يُعيد ذلك المستخدم الخاص بنا:
+
+<div dir="ltr">
+
+```python
+client.me
+```
+
+</div>
+
+إذا نجح ذلك، فإن نسخة Argilla الخاصة بك تعمل وأنت متصل بها! تهانينا!
+
+يمكننا الآن البدء بتحميل أول مجموعة بيانات (dataset) لنا إلى Argilla.
+
+</div>

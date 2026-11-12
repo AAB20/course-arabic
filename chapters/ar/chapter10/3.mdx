@@ -1,0 +1,136 @@
+<div dir="rtl" style="direction:rtl;text-align:right;">
+
+# تحميل مجموعة بياناتك إلى Argilla[[load-your-dataset-to-argilla]]
+
+<CourseFloatingBanner chapter={10}
+  classNames="absolute z-10 right-0 top-0"
+  notebooks={[
+    {label: "Google Colab", value: "https://colab.research.google.com/github/huggingface/notebooks/blob/master/course/en/chapter10/section3.ipynb"},
+    {label: "Aws Studio", value: "https://studiolab.sagemaker.aws/import/github/huggingface/notebooks/blob/master/course/en/chapter10/section3.ipynb"},
+]} />
+
+بحسب مهمة معالجة اللغات الطبيعية (NLP) التي تعمل عليها، وحالة الاستخدام أو التطبيق المحدد، ستختلف بياناتك ومهمة الوسم (annotation). في هذا القسم من الدورة، سنستخدم [مجموعة بيانات تجمع الأخبار](https://huggingface.co/datasets/SetFit/ag_news) لإنجاز مهمتين: تصنيف النصوص (text classification) بحسب موضوع كل نص، وتصنيف الرموز (token classification) لتحديد الكيانات المسمّاة المذكورة فيه.
+
+<iframe
+  src="https://huggingface.co/datasets/SetFit/ag_news/embed/viewer/default/train"
+  frameborder="0"
+  width="100%"
+  height="560px"
+></iframe>
+
+من الممكن استيراد مجموعات البيانات من منصة Hub مباشرةً باستخدام واجهة مستخدم Argilla، لكننا سنستخدم حزمة SDK لنتعلم كيف يمكننا إجراء تعديلات إضافية على البيانات عند الحاجة.
+
+## تهيئة مجموعة بياناتك
+
+الخطوة الأولى هي الاتصال بنسخة Argilla الخاصة بنا كما فعلنا في القسم السابق:
+
+<div dir="ltr">
+
+```python
+import argilla as rg
+
+HF_TOKEN = "..."  # only for private spaces
+
+client = rg.Argilla(
+    api_url="...",
+    api_key="...",
+    headers={"Authorization": f"Bearer {HF_TOKEN}"},  # only for private spaces
+)
+```
+
+</div>
+
+يمكننا الآن التفكير في إعدادات مجموعة بياناتنا في Argilla، وهي تمثّل مهمة الوسم التي سنجريها على بياناتنا. أولًا، يمكننا تحميل مجموعة البيانات من منصة Hub وفحص سماتها (features)، لكي نتأكد من أننا نهيّئ مجموعة البيانات بشكل صحيح.
+
+<div dir="ltr">
+
+```python
+from datasets import load_dataset
+
+data = load_dataset("SetFit/ag_news", split="train")
+data.features
+```
+
+</div>
+
+هذه هي سمات مجموعة بياناتنا:
+
+<div dir="ltr">
+
+```python out
+{'text': Value(dtype='string', id=None),
+ 'label': Value(dtype='int64', id=None),
+ 'label_text': Value(dtype='string', id=None)}
+```
+
+</div>
+
+تحتوي مجموعة البيانات على `text` وكذلك على بعض التسميات الأولية لتصنيف النصوص. سنضيف هذه إلى إعدادات مجموعة بياناتنا مع سؤال `spans` للكيانات المسمّاة:
+
+<div dir="ltr">
+
+```python
+settings = rg.Settings(
+    fields=[rg.TextField(name="text")],
+    questions=[
+        rg.LabelQuestion(
+            name="label", title="Classify the text:", labels=data.unique("label_text")
+        ),
+        rg.SpanQuestion(
+            name="entities",
+            title="Highlight all the entities in the text:",
+            labels=["PERSON", "ORG", "LOC", "EVENT"],
+            field="text",
+        ),
+    ],
+)
+```
+
+</div>
+
+لنتعمق قليلًا في معنى هذه الإعدادات. أولًا، عرّفنا **الحقول** (fields)، وهي تتضمن المعلومات التي سنَسِمها. في هذه الحالة، لدينا حقل واحد فقط يأتي على شكل نص، لذا اخترنا `TextField`.
+
+ثم نعرّف **الأسئلة** (questions) التي تمثّل المهام التي نريد إجراءها على بياناتنا:
+
+- لمهمة تصنيف النصوص اخترنا `LabelQuestion`، واستخدمنا القيم الفريدة للعمود `label_text` تسمياتٍ لنا، للتأكد من أن السؤال متوافق مع التسميات الموجودة مسبقًا في مجموعة البيانات.
+- لمهمة تصنيف الرموز، سنحتاج إلى `SpanQuestion`. وقد عرّفنا مجموعة من التسميات التي سنستخدمها لتلك المهمة، إضافةً إلى الحقل الذي سنحدّد عليه المقاطع (spans).
+
+لمعرفة المزيد عن جميع أنواع الحقول والأسئلة المتاحة والإعدادات المتقدمة الأخرى، مثل البيانات الوصفية (metadata) والمتجهات (vectors)، انتقل إلى [توثيق Argilla](https://docs.argilla.io/latest/how_to_guides/dataset/#define-dataset-settings).
+
+## رفع مجموعة البيانات
+
+الآن بعد أن عرّفنا بعض الإعدادات، يمكننا إنشاء مجموعة البيانات:
+
+<div dir="ltr">
+
+```python
+dataset = rg.Dataset(name="ag_news", settings=settings)
+
+dataset.create()
+```
+
+</div>
+
+تظهر مجموعة البيانات الآن في نسخة Argilla الخاصة بنا، لكنك سترى أنها فارغة:
+
+<img src="https://huggingface.co/datasets/huggingface-course/documentation-images/resolve/main/en/chapter10/empty_dataset.png" alt="لقطة شاشة لمجموعة البيانات الفارغة."/>
+
+نحتاج الآن إلى إضافة السجلات (records) التي سنَسِمها، أي الصفوف في مجموعة بياناتنا. لفعل ذلك، علينا ببساطة تسجيل البيانات على شكل سجلات، وتوفير تعيين (mapping) للعناصر التي لا تحمل الاسم نفسه في مجموعة البيانات على منصة Hub وفي مجموعة بيانات Argilla:
+
+<div dir="ltr">
+
+```python
+dataset.records.log(data, mapping={"label_text": "label"})
+```
+
+</div>
+
+حدّدنا في التعيين أن العمود `label_text` في مجموعة البيانات يجب أن يُعيَّن إلى السؤال الذي يحمل الاسم `label`. وبهذه الطريقة، سنستخدم التسميات الموجودة في مجموعة البيانات وسومًا مسبقة (pre-annotations) لنتمكن من الوسم بشكل أسرع.
+
+بينما يستمر تسجيل السجلات، يمكنك البدء بالعمل على مجموعة بياناتك في واجهة مستخدم Argilla. في هذه المرحلة، ينبغي أن تبدو كما يلي:
+
+<img src="https://huggingface.co/datasets/huggingface-course/documentation-images/resolve/main/en/chapter10/argilla_initial_dataset.png" alt="لقطة شاشة لمجموعة البيانات في Argilla."/>
+
+أصبحت مجموعة بياناتنا الآن جاهزة لبدء الوسم!
+
+</div>

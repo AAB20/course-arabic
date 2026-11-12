@@ -1,0 +1,97 @@
+<div dir="rtl" style="direction:rtl;text-align:right;">
+
+# استخدام مجموعة بياناتك الموسومة[[use-your-annotated-dataset]]
+
+<CourseFloatingBanner chapter={10}
+  classNames="absolute z-10 right-0 top-0"
+  notebooks={[
+    {label: "Google Colab", value: "https://colab.research.google.com/github/huggingface/notebooks/blob/master/course/en/chapter10/section5.ipynb"},
+    {label: "Aws Studio", value: "https://studiolab.sagemaker.aws/import/github/huggingface/notebooks/blob/master/course/en/chapter10/section5.ipynb"},
+]} />
+
+سنتعلم الآن كيف نصدّر البيانات الموسومة (annotated) الموجودة لدينا في Argilla ونستخدمها.
+
+## تحميل مجموعة البيانات
+
+أولًا، علينا التأكد من أننا متصلون بنسخة Argilla الخاصة بنا كما في الخطوات السابقة:
+
+<div dir="ltr">
+
+```python
+import argilla as rg
+
+HF_TOKEN = "..."  # only for private spaces
+
+client = rg.Argilla(
+    api_url="...",
+    api_key="...",
+    headers={"Authorization": f"Bearer {HF_TOKEN}"},  # only for private spaces
+)
+```
+
+</div>
+
+والآن، سنحمّل مجموعة البيانات (dataset) التي سنعمل عليها:
+
+<div dir="ltr">
+
+```python
+dataset = client.datasets(name="ag_news")
+```
+
+</div>
+
+يكفي تحميل مجموعة البيانات واستدعاء سجلاتها باستخدام `dataset.records` لتبدأ باستخدام مجموعة بياناتك وسجلاتها لأغراضك وخطوط المعالجة (pipelines) الخاصة بك. لكننا سنتعلم أيضًا كيف نجري بعض العمليات الاختيارية، مثل تصفية السجلات وتصدير مجموعة بياناتك إلى Hugging Face Hub.
+
+## تصفية مجموعة البيانات
+
+أحيانًا لا تريد إلا استخدام السجلات المكتملة، لذا سنصفّي أولًا السجلات في مجموعة بياناتنا بناءً على حالتها:
+
+<div dir="ltr">
+
+```python
+status_filter = rg.Query(filter=rg.Filter([("status", "==", "completed")]))
+
+filtered_records = dataset.records(status_filter)
+```
+
+</div>
+
+>[!TIP]
+>⚠️ لاحظ أن السجلات ذات الحالة `completed` (أي السجلات التي تستوفي الحد الأدنى من الردود المُرسَلة المضبوط في إعدادات توزيع المهمة) قد تحتوي على أكثر من رد، وأن كل رد يمكن أن تكون حالته أيًّا من `submitted` أو `draft` أو `discarded`.
+
+تعرّف على المزيد حول الاستعلام عن السجلات وتصفيتها في [توثيق Argilla](https://docs.argilla.io/latest/how_to_guides/query/).
+
+## التصدير إلى منصة Hub
+
+يمكننا الآن تصدير وسومنا إلى Hugging Face Hub، لنتمكن من مشاركتها مع الآخرين. لفعل ذلك، سنحتاج إلى تحويل السجلات إلى كائن 🤗 Dataset ثم رفعه إلى منصة Hub:
+
+<div dir="ltr">
+
+```python
+filtered_records.to_datasets().push_to_hub("argilla/ag_news_annotated")
+```
+
+</div>
+
+بدلًا من ذلك، يمكننا تصدير مجموعة بيانات Argilla كاملةً مباشرةً (بما فيها السجلات المعلّقة) على النحو التالي:
+
+<div dir="ltr">
+
+```python
+dataset.to_hub(repo_id="argilla/ag_news_annotated")
+```
+
+</div>
+
+هذا خيار مثير للاهتمام في حال أراد الآخرون فتح مجموعة البيانات في نسخ Argilla الخاصة بهم، إذ تُحفظ الإعدادات تلقائيًا ويمكنهم ببساطة استيراد مجموعة البيانات كاملةً باستخدام سطر واحد من الكود:
+
+<div dir="ltr">
+
+```python
+dataset = rg.Dataset.from_hub(repo_id="argilla/ag_news_annotated")
+```
+
+</div>
+
+</div>
